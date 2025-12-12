@@ -23,7 +23,7 @@ public class UserService{
     private ComplainService complainService;
 
     public List<String> getAllComplainByStatus(String status){
-        List<Complain> complainList = complainRepo.findAllByComplainStatus(ComplainStatus.valueOf(status));
+        List<Complain> complainList = complainRepo.findAllByStatus(ComplainStatus.valueOf(status));
         List<String> complainNumberList = new ArrayList<>();
         for(Complain complain : complainList){
             String complainNumber;
