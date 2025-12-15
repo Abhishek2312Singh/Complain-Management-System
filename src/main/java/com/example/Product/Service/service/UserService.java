@@ -59,5 +59,10 @@ public class UserService{
         }
         return complainOutputDtos;
     }
+    public void setComplainClosed(String complainNumber, Manager manager){
+        Complain complain = complainRepo.findByComplainNumber(complainNumber).orElseThrow(()->new RuntimeException("Complain Not Found!!"));
+        complain.setStatus(ComplainStatus.CLOSED);
+        complainRepo.save(complain);
+    }
 
 }
