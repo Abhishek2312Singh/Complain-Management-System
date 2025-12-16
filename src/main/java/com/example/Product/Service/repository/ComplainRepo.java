@@ -17,5 +17,5 @@ public interface ComplainRepo extends JpaRepository<Complain,Long> {
     List<Complain> findAllByStatus(ComplainStatus status);
     List<Complain> findByManagerAndStatus(Manager manager, ComplainStatus status);
     List<Complain> findByManagerOrStatus(Manager manager, ComplainStatus status);
-    List<Complain> findByStatusAndComplainNumberLike(ComplainStatus status, String complainNumber);
+    List<Complain> findByStatusAndComplainNumberEndsWith(ComplainStatus status, String complainNumber);
 }

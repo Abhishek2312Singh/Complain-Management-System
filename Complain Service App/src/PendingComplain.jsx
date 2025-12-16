@@ -14,78 +14,74 @@ const PendingComplain = () => {
   const [updateMessage, setUpdateMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchPendingComplains = async () => {
+  useEffect(() => {
     const token = localStorage.getItem("authToken");
     if (!token) {
       setError("You are not authenticated. Please login again.");
       return;
     }
 
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("http://localhost:8080/getallcomplain?status=PENDING", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`
+    const fetchPendingComplains = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await fetch("http://localhost:8080/getallcomplain?status=PENDING", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          console.error("API Error:", response.status, errorText);
+          setError(
+            errorText && errorText.trim().length > 0
+              ? errorText.trim()
+              : `Failed to load pending complaints. Status: ${response.status}`
+          );
+          setComplainNumbers([]);
+          return;
         }
-      });
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        setError(
-          errorText && errorText.trim().length > 0
-            ? errorText.trim()
-            : `Failed to load pending complaints. Status: ${response.status}`
-        );
-        setComplainNumbers([]);
-        return;
-      }
-      
-      // Try to parse as JSON first, fallback to text
-      const contentType = response.headers.get("content-type");
-      let data;
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        try {
-          data = JSON.parse(text);
-        } catch {
-          // If it's not JSON, treat as array of strings (one per line)
-          data = text.split("\n").filter(line => line.trim().length > 0);
+        
+        // Try to parse as JSON first, fallback to text
+        const contentType = response.headers.get("content-type");
+        let data;
+        if (contentType && contentType.includes("application/json")) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          try {
+            data = JSON.parse(text);
+          } catch {
+            // If it's not JSON, treat as array of strings (one per line)
+            data = text.split("\n").filter(line => line.trim().length > 0);
+          }
         }
-      }
-      
-      // Handle list of strings - ensure we get an array of strings
-      if (Array.isArray(data)) {
-        // Map each item to string to handle any type conversion
-        setComplainNumbers(data.map(item => String(item).trim()).filter(item => item.length > 0));
-      } else if (data && typeof data === "object") {
-        // If it's an object, try to extract an array from common properties
-        const numbers = data.complainNumbers || data.data || data.list || [];
-        setComplainNumbers(Array.isArray(numbers) ? numbers.map(item => String(item).trim()).filter(item => item.length > 0) : []);
-      } else {
+        
+        // Handle list of strings - ensure we get an array of strings
+        if (Array.isArray(data)) {
+          // Map each item to string to handle any type conversion
+          setComplainNumbers(data.map(item => String(item).trim()).filter(item => item.length > 0));
+        } else if (data && typeof data === "object") {
+          // If it's an object, try to extract an array from common properties
+          const numbers = data.complainNumbers || data.data || data.list || [];
+          setComplainNumbers(Array.isArray(numbers) ? numbers.map(item => String(item).trim()).filter(item => item.length > 0) : []);
+        } else {
+          setComplainNumbers([]);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(`Failed to load pending complaints: ${err.message}`);
         setComplainNumbers([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(`Failed to load pending complaints: ${err.message}`);
-      setComplainNumbers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchPendingComplains();
   }, []);
 
   useEffect(() => {
-    // Only fetch managers if there are complaints to display
-    if (complainNumbers.length === 0) {
-      setManagers([]);
-      return;
-    }
-
     const token = localStorage.getItem("authToken");
     if (!token) {
       return;
@@ -101,14 +97,17 @@ const PendingComplain = () => {
           }
         });
         if (!response.ok) {
+          console.error("Failed to load managers:", response.status);
           setManagers([]);
           return;
         }
         const data = await response.json();
         // Store full manager objects
         const managerList = Array.isArray(data) ? data : [];
+        console.log("Managers data from API:", managerList);
         setManagers(managerList);
       } catch (err) {
+        console.error("Error fetching managers:", err);
         setManagers([]);
       } finally {
         setManagersLoading(false);
@@ -116,7 +115,153 @@ const PendingComplain = () => {
     };
 
     fetchManagers();
-  }, [complainNumbers]);
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      // Reset to show all complaints when search is cleared
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+      
+      const fetchPendingComplains = async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const response = await fetch("http://localhost:8080/getallcomplain?status=PENDING", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => "");
+            setError(
+              errorText && errorText.trim().length > 0
+                ? errorText.trim()
+                : `Failed to load pending complaints. Status: ${response.status}`
+            );
+            setComplainNumbers([]);
+            return;
+          }
+          
+          const contentType = response.headers.get("content-type");
+          let data;
+          if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            try {
+              data = JSON.parse(text);
+            } catch {
+              data = text.split("\n").filter(line => line.trim().length > 0);
+            }
+          }
+          
+          if (Array.isArray(data)) {
+            setComplainNumbers(data.map(item => String(item).trim()).filter(item => item.length > 0));
+          } else if (data && typeof data === "object") {
+            const numbers = data.complainNumbers || data.data || data.list || [];
+            setComplainNumbers(Array.isArray(numbers) ? numbers.map(item => String(item).trim()).filter(item => item.length > 0) : []);
+          } else {
+            setComplainNumbers([]);
+          }
+        } catch (err) {
+          console.error("Fetch error:", err);
+          setError(`Failed to load pending complaints: ${err.message}`);
+          setComplainNumbers([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchPendingComplains();
+    } else {
+      const timeoutId = setTimeout(() => {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          setError("You are not authenticated. Please login again.");
+          return;
+        }
+
+        const searchComplains = async () => {
+          setLoading(true);
+          setError("");
+          try {
+            const response = await fetch(
+              `http://localhost:8080/complain/searchcomplain?status=PENDING&complainNumber=${encodeURIComponent(searchTerm.trim())}`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+            if (!response.ok) {
+              const errorText = await response.text().catch(() => "");
+              setError(
+                errorText && errorText.trim().length > 0
+                  ? errorText.trim()
+                  : `Failed to search complaints. Status: ${response.status}`
+              );
+              setComplainNumbers([]);
+              return;
+            }
+            
+            const contentType = response.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+              data = await response.json();
+            } else {
+              const text = await response.text();
+              try {
+                data = JSON.parse(text);
+              } catch {
+                data = text.split("\n").filter(line => line.trim().length > 0);
+              }
+            }
+            
+            // Handle search response - could be array of numbers or full objects
+            let numbers = [];
+            if (Array.isArray(data)) {
+              if (data.length > 0 && typeof data[0] === "object" && data[0] !== null) {
+                // Full objects - extract complain numbers
+                numbers = data.map(item => {
+                  const num = item.complainNumber || item.complain_number || item.id || "";
+                  return String(num).trim();
+                }).filter(num => num.length > 0);
+              } else {
+                // Just numbers
+                numbers = data.map(item => String(item).trim()).filter(item => item.length > 0);
+              }
+            } else if (data && typeof data === "object" && !Array.isArray(data)) {
+              const extracted = data.complainNumbers || data.data || data.list || [];
+              if (Array.isArray(extracted) && extracted.length > 0) {
+                if (typeof extracted[0] === "object") {
+                  numbers = extracted.map(item => {
+                    const num = item.complainNumber || item.complain_number || item.id || "";
+                    return String(num).trim();
+                  }).filter(num => num.length > 0);
+                } else {
+                  numbers = extracted.map(item => String(item).trim()).filter(item => item.length > 0);
+                }
+              }
+            }
+            
+            setComplainNumbers(numbers);
+          } catch (err) {
+            setError(`Failed to search complaints: ${err.message}`);
+            setComplainNumbers([]);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        searchComplains();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   const handleOpenComplain = async (complainNumber) => {
     const token = localStorage.getItem("authToken");
@@ -152,6 +297,7 @@ const PendingComplain = () => {
       const data = await response.json();
       setOpenedComplain(data);
     } catch (err) {
+      console.error("Error fetching complain:", err);
       setOpenError(err.message || "Failed to load complain details.");
     } finally {
       setOpeningComplain(false);
@@ -201,10 +347,69 @@ const PendingComplain = () => {
       setUpdateMessage(data && data.trim().length > 0 ? data.trim() : "Complain updated successfully.");
       setTimeout(() => setUpdateMessage(""), 3000);
     } catch (err) {
+      console.error("Error updating complain:", err);
       setUpdateMessage(err.message || "Failed to update complain.");
       setTimeout(() => setUpdateMessage(""), 3000);
     } finally {
       setUpdatingComplain(false);
+    }
+  };
+
+  const fetchPendingComplains = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setError("You are not authenticated. Please login again.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("http://localhost:8080/getallcomplain?status=PENDING", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        console.error("API Error:", response.status, errorText);
+        setError(
+          errorText && errorText.trim().length > 0
+            ? errorText.trim()
+            : `Failed to load pending complaints. Status: ${response.status}`
+        );
+        setComplainNumbers([]);
+        return;
+      }
+      
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text.split("\n").filter(line => line.trim().length > 0);
+        }
+      }
+      
+      if (Array.isArray(data)) {
+        setComplainNumbers(data.map(item => String(item).trim()).filter(item => item.length > 0));
+      } else if (data && typeof data === "object") {
+        const numbers = data.complainNumbers || data.data || data.list || [];
+        setComplainNumbers(Array.isArray(numbers) ? numbers.map(item => String(item).trim()).filter(item => item.length > 0) : []);
+      } else {
+        setComplainNumbers([]);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(`Failed to load pending complaints: ${err.message}`);
+      setComplainNumbers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -244,7 +449,8 @@ const PendingComplain = () => {
             color: "#111827",
             font: "inherit",
             fontSize: "0.9rem",
-            width: "250px"
+            width: "250px",
+            outline: "none"
           }}
         />
       </div>
@@ -336,14 +542,8 @@ const PendingComplain = () => {
               </tr>
             </thead>
             <tbody>
-              {complainNumbers.filter(complainNumber => 
-                searchTerm === "" || String(complainNumber || "").toLowerCase().includes(searchTerm.toLowerCase())
-              ).length > 0 ? (
-                complainNumbers
-                  .filter(complainNumber => 
-                    searchTerm === "" || String(complainNumber || "").toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((complainNumber, index) => (
+              {complainNumbers.length > 0 ? (
+                complainNumbers.map((complainNumber, index) => (
                   <tr key={index}>
                     <td
                       style={{
@@ -477,7 +677,7 @@ const PendingComplain = () => {
                       fontSize: "0.9rem"
                     }}
                   >
-                    No pending complaints found.
+                    {searchTerm ? "No complaints found matching your search." : "No pending complaints found."}
                   </td>
                 </tr>
               )}
@@ -530,14 +730,14 @@ const PendingComplain = () => {
                 setOpenError("");
               }}
               style={{
-                width: "auto",
-                padding: "8px 12px",
-                borderRadius: "999px",
-                border: "1px solid #d1d5db",
-                background: "#e5e7eb",
-                color: "#111827",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                border: "1px solid #bae6fd",
+                background: "#ffffff",
+                color: "#0c4a6e",
                 font: "inherit",
-                cursor: "pointer"
+                cursor: "pointer",
+                fontSize: "0.85rem"
               }}
             >
               Close
@@ -558,7 +758,7 @@ const PendingComplain = () => {
                 
                 // Replace Manager name related keys with "Assign Manager Name"
                 if (key.toLowerCase().includes("manager") && (key.toLowerCase().includes("name") || key.toLowerCase() === "manager")) {
-                  displayKey = "Manager Name";
+                  displayKey = "Assign Manager Name";
                 }
                 
                 return (

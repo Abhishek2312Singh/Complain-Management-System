@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +46,8 @@ public class ManagerService {
         complain.setComplainResponse(response);
         complainRepo.save(complain);
     }
-    public List<UserOutputDto> getAllManager(){
+    public List<UserOutputDto> getAllManager(Principal principal){
+        if(principal.getName().equals("admin")){
         List<Manager> managers = managerRepo.findAll();
         List<UserOutputDto> userOutputDtos = new ArrayList<>();
         for(Manager manager : managers){
@@ -57,6 +59,8 @@ public class ManagerService {
             userOutputDtos.add(userOutputDto);
         }
         return userOutputDtos;
+    }
+        throw new RuntimeException("Unauthorized User!!");
     }
     public String addManager(UserInputDto userInputDto){
         Manager manager = new Manager();

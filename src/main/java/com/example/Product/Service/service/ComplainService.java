@@ -77,11 +77,26 @@ public class ComplainService {
         }
     }
     public List<ComplainOutputDto> getComplainByComplainNumberAndStatus(String status, String complainNumber){
-        List<Complain> complainList = complainRepo.findByStatusAndComplainNumberLike(ComplainStatus.valueOf(status.toUpperCase()),complainNumber);
+        List<Complain> complainList = complainRepo.findByStatusAndComplainNumberEndsWith(ComplainStatus.valueOf(status.toUpperCase()),complainNumber);
         List<ComplainOutputDto> complainOutputDtos = new ArrayList<>();
         for(Complain complain : complainList){
-            complainOutputDtos.add(convertToDto(complain));
+            if(status.equals(ComplainStatus.PENDING.toString())){
+                ComplainOutputDto complainOutputDto = new ComplainOutputDto();
+                complainOutputDto.setComplain(complain.getComplain());
+                complainOutputDto.setMobile(complain.getMobile());
+                complainOutputDto.setComplainDate(complain.getComplainDate());
+                complainOutputDto.setUsername(complain.getUsername());
+                complainOutputDto.setEmail(complain.getEmail());
+                complainOutputDto.setComplainNumber(complain.getComplainNumber());
+                complainOutputDto.setAddress(complain.getAddress());
+                complainOutputDto.setStatus(complain.getStatus());
+                complainOutputDtos.add(complainOutputDto);
+            }
+            else {
+                complainOutputDtos.add(convertToDto(complain));
+            }
         }
+
         return complainOutputDtos;
     }
 }
