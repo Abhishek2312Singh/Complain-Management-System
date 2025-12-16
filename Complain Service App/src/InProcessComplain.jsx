@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 const InProcessComplain = () => {
   const [complainNumbers, setComplainNumbers] = useState([]);
@@ -11,6 +11,7 @@ const InProcessComplain = () => {
   const [closingComplain, setClosingComplain] = useState(false);
   const [closeMessage, setCloseMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const hasFetchedComplains = useRef(false);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -18,6 +19,10 @@ const InProcessComplain = () => {
       setError("You are not authenticated. Please login again.");
       return;
     }
+
+    // Prevent duplicate calls
+    if (hasFetchedComplains.current) return;
+    hasFetchedComplains.current = true;
 
     const fetchInProcessComplains = async () => {
       setLoading(true);
@@ -31,7 +36,6 @@ const InProcessComplain = () => {
         });
         if (!response.ok) {
           const errorText = await response.text().catch(() => "");
-          console.error("API Error:", response.status, errorText);
           setError(
             errorText && errorText.trim().length > 0
               ? errorText.trim()
@@ -101,7 +105,6 @@ const InProcessComplain = () => {
           setComplaints({});
         }
       } catch (err) {
-        console.error("Fetch error:", err);
         setError(`Failed to load in-process complaints: ${err.message}`);
         setComplainNumbers([]);
         setComplaints({});
@@ -370,7 +373,6 @@ const InProcessComplain = () => {
       const data = await response.json();
       setOpenedComplain(data);
     } catch (err) {
-      console.error("Error fetching complain:", err);
       setOpenError(err.message || "Failed to load complain details.");
     } finally {
       setOpeningComplain(false);
@@ -496,7 +498,6 @@ const InProcessComplain = () => {
       
       fetchInProcessComplains();
     } catch (err) {
-      console.error("Error closing complain:", err);
       setCloseMessage(err.message || "Failed to close complain.");
       setTimeout(() => setCloseMessage(""), 3000);
     } finally {
@@ -522,7 +523,6 @@ const InProcessComplain = () => {
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
-        console.error("API Error:", response.status, errorText);
         setError(
           errorText && errorText.trim().length > 0
             ? errorText.trim()
@@ -584,7 +584,6 @@ const InProcessComplain = () => {
         setComplaints({});
       }
     } catch (err) {
-      console.error("Fetch error:", err);
       setError(`Failed to load in-process complaints: ${err.message}`);
       setComplainNumbers([]);
       setComplaints({});
@@ -735,8 +734,14 @@ const InProcessComplain = () => {
                                     complaint.managerUserName ||
                                     "—";
                   
-                  // Check if response is null or empty
-                  const response = complaint.response || complaint.complainResponse || complaint.complain_response || null;
+                  // Check if response is null or empty - check all possible field name variations
+                  // Check exact field names first (case-sensitive for camelCase like complainResponse)
+                  const response = complaint.complainResponse || 
+                                  complaint.response || 
+                                  complaint.complain_response || 
+                                  complaint.managerResponse ||
+                                  complaint.manager_response ||
+                                  null;
                   const hasResponse = response !== null && response !== undefined && response !== "" && (!Array.isArray(response) || response.length > 0);
                   
                   return (
@@ -900,15 +905,95 @@ const InProcessComplain = () => {
               fontSize: "0.9rem"
             }}
           >
+            {/* Always show Response field first - check all possible field name variations */}
+            {(() => {
+              // Get all keys from the complaint object
+              const allKeys = Object.keys(openedComplain);
+              
+              // Find any field that might be the response field
+              // First check for exact field name matches (case-sensitive for camelCase)
+              let responseKey = allKeys.find(key => 
+                key === "response" || 
+                key === "complainResponse" || 
+                key === "complain_response" ||
+                key === "managerResponse" ||
+                key === "manager_response"
+              );
+              
+              // If not found, try case-insensitive matches
+              if (!responseKey) {
+                responseKey = allKeys.find(key => {
+                  const keyLower = key.toLowerCase();
+                  return keyLower === "response" || 
+                         keyLower === "complainresponse" || 
+                         keyLower === "complain_response" ||
+                         keyLower === "managerresponse" ||
+                         keyLower === "manager_response";
+                });
+              }
+              
+              // If still not found, try any field containing "response" (case-insensitive)
+              if (!responseKey) {
+                responseKey = allKeys.find(key => 
+                  key.toLowerCase().includes("response")
+                );
+              }
+              
+              // Get the response value
+              let responseValue = null;
+              if (responseKey) {
+                responseValue = openedComplain[responseKey];
+              }
+              
+              // Always show Response field, even if empty
+              let displayValue;
+              if (responseValue === null || responseValue === undefined) {
+                displayValue = "No response yet";
+              } else if (responseValue === "") {
+                displayValue = "No response yet";
+              } else if (Array.isArray(responseValue)) {
+                displayValue = responseValue.length > 0 ? responseValue.join("\n") : "No response yet";
+              } else {
+                const strValue = String(responseValue);
+                displayValue = strValue.trim() || "No response yet";
+              }
+              
+              return (
+                <div
+                  key="response-field"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "150px 1fr",
+                    gap: "8px",
+                    padding: "8px 12px",
+                    borderBottom: "2px solid #bae6fd",
+                    backgroundColor: "#f0f9ff",
+                    borderRadius: "6px",
+                    marginBottom: "8px"
+                  }}
+                >
+                  <strong style={{ color: "#075985", fontSize: "0.95rem" }}>Response:</strong>
+                  <span style={{ color: "#0c4a6e", whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: "0.9rem" }}>
+                    {displayValue}
+                  </span>
+                </div>
+              );
+            })()}
             {Object.entries(openedComplain)
               .filter(([key, value]) => {
-                // Always show response fields even if null/empty/array
-                const isResponseField = key.toLowerCase() === "response" || 
-                                      key.toLowerCase() === "complainresponse" || 
-                                      key.toLowerCase() === "complain_response" ||
-                                      key.toLowerCase() === "complainResponse";
+                // Exclude response fields from main loop since we show them separately at the top
+                const keyLower = key.toLowerCase();
+                const isResponseField = keyLower === "response" || 
+                                      keyLower === "complainresponse" || 
+                                      keyLower === "complain_response" ||
+                                      keyLower === "complainResponse" ||
+                                      keyLower === "managerresponse" ||
+                                      keyLower === "manager_response" ||
+                                      keyLower === "managerResponse" ||
+                                      keyLower.includes("response");
+                // Skip response fields in the main loop (already shown at top)
                 if (isResponseField) {
-                  return true;
+                  return false;
                 }
                 // Filter out null/undefined/empty for other fields
                 // But allow arrays (even empty ones) to be displayed
@@ -926,21 +1011,11 @@ const InProcessComplain = () => {
                   displayKey = "Manager Name";
                 }
                 
-                // Handle response field names
-                const isResponseField = key.toLowerCase() === "response" || 
-                                      key.toLowerCase() === "complainresponse" || 
-                                      key.toLowerCase() === "complain_response" ||
-                                      key.toLowerCase() === "complainResponse";
-                if (isResponseField) {
-                  displayKey = "Response";
-                }
-                
-                // Handle null/empty response and array responses
+                // Handle null/empty values
                 let displayValue;
                 if (value === null || value === undefined || value === "") {
                   displayValue = "—";
                 } else if (Array.isArray(value)) {
-                  // If response is an array/list, join with newlines
                   displayValue = value.length > 0 ? value.join("\n") : "—";
                 } else {
                   displayValue = String(value);

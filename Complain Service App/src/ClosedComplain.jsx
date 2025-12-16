@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 const ClosedComplain = () => {
   const [complainNumbers, setComplainNumbers] = useState([]);
@@ -9,6 +9,7 @@ const ClosedComplain = () => {
   const [openedComplain, setOpenedComplain] = useState(null);
   const [openError, setOpenError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const hasFetchedComplains = useRef(false);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -16,6 +17,10 @@ const ClosedComplain = () => {
       setError("You are not authenticated. Please login again.");
       return;
     }
+
+    // Prevent duplicate calls
+    if (hasFetchedComplains.current) return;
+    hasFetchedComplains.current = true;
 
     const fetchClosedComplains = async () => {
       setLoading(true);
@@ -29,7 +34,6 @@ const ClosedComplain = () => {
         });
         if (!response.ok) {
           const errorText = await response.text().catch(() => "");
-          console.error("API Error:", response.status, errorText);
           setError(
             errorText && errorText.trim().length > 0
               ? errorText.trim()
@@ -99,7 +103,6 @@ const ClosedComplain = () => {
           setComplaints({});
         }
       } catch (err) {
-        console.error("Fetch error:", err);
         setError(`Failed to load closed complaints: ${err.message}`);
         setComplainNumbers([]);
         setComplaints({});
@@ -368,7 +371,6 @@ const ClosedComplain = () => {
       const data = await response.json();
       setOpenedComplain(data);
     } catch (err) {
-      console.error("Error fetching complain:", err);
       setOpenError(err.message || "Failed to load complain details.");
     } finally {
       setOpeningComplain(false);
@@ -393,7 +395,6 @@ const ClosedComplain = () => {
       });
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
-        console.error("API Error:", response.status, errorText);
         setError(
           errorText && errorText.trim().length > 0
             ? errorText.trim()
@@ -455,7 +456,6 @@ const ClosedComplain = () => {
         setComplaints({});
       }
     } catch (err) {
-      console.error("Fetch error:", err);
       setError(`Failed to load closed complaints: ${err.message}`);
       setComplainNumbers([]);
       setComplaints({});

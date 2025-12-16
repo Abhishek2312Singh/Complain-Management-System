@@ -31,7 +31,7 @@ public class ManagerService {
         List<Complain> complainList = complainRepo.findByManagerAndStatus(managerRepo.findByUsername(username).orElseThrow(
                         ()->new UsernameNotFoundException("Manager Not found!!!")
                 ),
-               ComplainStatus.PENDING);
+               ComplainStatus.IN_PROCESS);
         List<ComplainOutputDto> complainOutputDtos = new ArrayList<>();
         for(Complain complain : complainList){
             complainOutputDtos.add(complainService.convertToDto(complain));

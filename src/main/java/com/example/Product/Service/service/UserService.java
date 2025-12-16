@@ -75,35 +75,66 @@ public class UserService{
         complainRepo.save(complain);
     }
     public UserOutputDto getUser(Principal principal){
-        User user = userRepo.findByUsername(principal.getName()).orElseThrow(()-> new UsernameNotFoundException("User not found!!"));
+        if(principal.getName().equals("admin")){
+        User user = userRepo.findByUsername(principal.getName()).orElseThrow(()-> new UsernameNotFoundException("Admin not found!!"));
         UserOutputDto userOutputDto = new UserOutputDto();
         userOutputDto.setFullName(user.getFullName());
         userOutputDto.setMobile(user.getMobile());
         userOutputDto.setEmail(user.getEmail());
         userOutputDto.setUsername(user.getUsername());
         return userOutputDto;
+        }
+        else{
+            Manager manager = managerRepo.findByUsername(principal.getName()).orElseThrow(()->new UsernameNotFoundException("Manager Not Found!!"));
+            UserOutputDto userOutputDto = new UserOutputDto();
+            userOutputDto.setFullName(manager.getFullName());
+            userOutputDto.setMobile(manager.getMobile().toString());
+            userOutputDto.setEmail(manager.getEmail());
+            userOutputDto.setUsername(manager.getUsername());
+            return userOutputDto;
+        }
     }
     public String updateUser(UserInputDto userInputDto,Principal principal){
-        User user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UsernameNotFoundException("User not found!!"));
-        user.setMobile(userInputDto.getMobile());
-        user.setEmail(userInputDto.getEmail());
-        userRepo.save(user);
+        if(principal.getName().equals("admin")) {
+            User user = userRepo.findByUsername(principal.getName()).orElseThrow(() -> new UsernameNotFoundException("User not found!!"));
+            user.setMobile(userInputDto.getMobile());
+            user.setEmail(userInputDto.getEmail());
+            userRepo.save(user);
+        }else {
+            Manager manager = managerRepo.findByUsername(principal.getName()).orElseThrow(() -> new UsernameNotFoundException("User not found!!"));
+            manager.setEmail(userInputDto.getEmail());
+            manager.setMobile(Long.parseLong(userInputDto.getMobile()));
+            managerRepo.save(manager);
+        }
         return "Profile Updated!!";
     }
     public String updatePassword(String currentPassword,String newPassword,String confirmPassword,Principal principal){
-        User user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UsernameNotFoundException("User not found!!"));
-        if(config.encoder().matches(currentPassword,user.getPassword())){
-            if(newPassword.equals(confirmPassword)){
-                user.setPassword(config.encoder().encode(newPassword));
-                userRepo.save(user);
-                return "Password Updated!!";
+        if(principal.getName().equals("admin")) {
+            User user = userRepo.findByUsername(principal.getName()).orElseThrow(() -> new UsernameNotFoundException("User not found!!"));
+            if (config.encoder().matches(currentPassword, user.getPassword())) {
+                if (newPassword.equals(confirmPassword)) {
+                    user.setPassword(config.encoder().encode(newPassword));
+                    userRepo.save(user);
+                    return "Password Updated!!";
+                } else {
+                    throw new RuntimeException("New Password and Current Password Not Matched!!");
+                }
+            } else {
+                throw new RuntimeException("Wrong Password!!");
             }
-            else {
-                throw new RuntimeException("New Password and Current Password Not Matched!!");
+        }else{
+            Manager manager = managerRepo.findByUsername(principal.getName()).orElseThrow(() -> new UsernameNotFoundException("User not found!!"));
+            if (config.encoder().matches(currentPassword, manager.getPassword())) {
+                if (newPassword.equals(confirmPassword)) {
+                    manager.setPassword(config.encoder().encode(newPassword));
+                    managerRepo.save(manager);
+                    return "Password Updated!!";
+                } else {
+                    throw new RuntimeException("New Password and Current Password Not Matched!!");
+                }
+            } else {
+                throw new RuntimeException("Wrong Password!!");
             }
-        }
-        else {
-            throw new RuntimeException("Wrong Password!!");
         }
     }
 }

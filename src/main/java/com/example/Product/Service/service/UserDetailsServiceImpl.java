@@ -17,10 +17,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         if (username.equals("admin")) {
-            return userRepo.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found!!"));
+            return userRepo.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Admin Not Found!!"));
         }
         else {
-            return managerRepo.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found!!"));
+            return managerRepo.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Manager Not Found!!"));
         }
     }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import AdminPanel from "./AdminPanel";
+import ManagerPanel from "./ManagerPanel";
 
 const STORAGE_KEY = "complaints";
 const STATUS_OPTIONS = ["PENDING", "IN_PROCESS", "Open", "In Progress", "Resolved", "Closed"];
@@ -145,6 +146,7 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -154,7 +156,37 @@ function App() {
     setComplaints(loadComplaints());
     const savedToken = localStorage.getItem("authToken");
     if (savedToken) {
-      setIsAdmin(true);
+      // Check user type on initial load
+      const checkUserType = async () => {
+        try {
+          const response = await fetch("http://localhost:8080/getuser", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${savedToken}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const username = data.username || data.userName || "";
+            if (username.toLowerCase() === "admin") {
+              setIsAdmin(true);
+              setIsManager(false);
+            } else {
+              setIsAdmin(false);
+              setIsManager(true);
+            }
+          } else {
+            // If check fails, assume not logged in
+            setIsAdmin(false);
+            setIsManager(false);
+          }
+        } catch (err) {
+          // If check fails, assume not logged in
+          setIsAdmin(false);
+          setIsManager(false);
+        }
+      };
+      checkUserType();
     }
   }, []);
 
@@ -302,12 +334,16 @@ function App() {
         onLogoutClick={() => {
           localStorage.removeItem("authToken");
           setIsAdmin(false);
+          setIsManager(false);
         }}
         isAdmin={isAdmin}
+        isManager={isManager}
       />
 
       {isAdmin ? (
         <AdminPanel />
+      ) : isManager ? (
+        <ManagerPanel />
       ) : (
         <main>
         {showForm && (
@@ -507,10 +543,49 @@ function App() {
                   const token = typeof data === "string" ? data.trim() : null;
                   if (token) {
                     localStorage.setItem("authToken", token);
+                    // Check if user is admin or manager
+                    try {
+                      const userResponse = await fetch("http://localhost:8080/getuser", {
+                        method: "GET",
+                        headers: {
+                          Authorization: `Bearer ${token}`
+                        }
+                      });
+                      if (userResponse.ok) {
+                        const userData = await userResponse.json();
+                        const username = userData.username || userData.userName || "";
+                        if (username.toLowerCase() === "admin") {
+                          setIsAdmin(true);
+                          setIsManager(false);
+                        } else {
+                          setIsAdmin(false);
+                          setIsManager(true);
+                        }
+                      } else {
+                        // If user check fails, try to use the login username
+                        const loginUser = loginUsername.trim().toLowerCase();
+                        if (loginUser === "admin") {
+                          setIsAdmin(true);
+                          setIsManager(false);
+                        } else {
+                          setIsAdmin(false);
+                          setIsManager(true);
+                        }
+                      }
+                    } catch (err) {
+                      // If user check fails, try to use the login username
+                      const loginUser = loginUsername.trim().toLowerCase();
+                      if (loginUser === "admin") {
+                        setIsAdmin(true);
+                        setIsManager(false);
+                      } else {
+                        setIsAdmin(false);
+                        setIsManager(true);
+                      }
+                    }
                     setShowLogin(false);
                     setLoginUsername("");
                     setLoginPassword("");
-                    setIsAdmin(true);
                   } else {
                     setLoginError("Login succeeded but no token was returned by the server.");
                   }

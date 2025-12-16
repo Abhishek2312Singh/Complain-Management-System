@@ -40,6 +40,7 @@ public class AuthController {
     public ResponseEntity<?> getUser(Principal principal){
         return ResponseEntity.ok(userService.getUser(principal));
     }
+
     @PutMapping("/updateuser")
     public ResponseEntity<?> updateUser(@RequestBody UserInputDto userInputDto,Principal principal){
         try{

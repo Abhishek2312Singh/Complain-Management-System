@@ -1,6 +1,9 @@
 package com.example.Product.Service.config;
 
 import com.example.Product.Service.filter.JWTFilter;
+import com.example.Product.Service.repository.ManagerRepo;
+import com.example.Product.Service.repository.UserRepo;
+import com.example.Product.Service.util.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +23,24 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    @Autowired
-    private JWTFilter jwtFilterilter;
+
+    private final JWTUtil jwtUtil;
+    private final UserRepo userRepo;
+    private final ManagerRepo managerRepo;
+
+    public SecurityConfig(
+            JWTUtil jwtUtil,
+            UserRepo userRepo,
+            ManagerRepo managerRepo
+    ) {
+        this.jwtUtil = jwtUtil;
+        this.userRepo = userRepo;
+        this.managerRepo = managerRepo;
+    }
+    @Bean
+    public JWTFilter jwtFilter() {
+        return new JWTFilter(jwtUtil, userRepo, managerRepo);
+    }
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
         return http
@@ -33,7 +52,7 @@ public class SecurityConfig {
                                 .requestMatchers("/complain/**").permitAll()
                                 .anyRequest().authenticated())
 //                .httpBasic(Customizer.withDefaults())
-                .addFilterBefore(jwtFilterilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
     @Bean

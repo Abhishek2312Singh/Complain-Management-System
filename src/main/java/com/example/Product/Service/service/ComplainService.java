@@ -62,17 +62,11 @@ public class ComplainService {
         complainOutputDto.setStatus(complain.getStatus());
         if(complain.getStatus() == ComplainStatus.PENDING){
             return complainOutputDto;
-        } else if (complain.getStatus() == ComplainStatus.IN_PROCESS) {
+        } else {
             complainOutputDto.setManagerEmail(complain.getManager().getEmail());
             complainOutputDto.setManagerName(complain.getManager().getFullName());
             complainOutputDto.setManagerMobile(complain.getManager().getMobile());
-            return complainOutputDto;
-        }
-        else {
             complainOutputDto.setComplainResponse(complain.getComplainResponse());
-            complainOutputDto.setManagerEmail(complain.getManager().getEmail());
-            complainOutputDto.setManagerName(complain.getManager().getFullName());
-            complainOutputDto.setManagerMobile(complain.getManager().getMobile());
             return complainOutputDto;
         }
     }

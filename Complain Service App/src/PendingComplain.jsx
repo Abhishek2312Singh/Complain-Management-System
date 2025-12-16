@@ -104,7 +104,6 @@ const PendingComplain = () => {
         const data = await response.json();
         // Store full manager objects
         const managerList = Array.isArray(data) ? data : [];
-        console.log("Managers data from API:", managerList);
         setManagers(managerList);
       } catch (err) {
         console.error("Error fetching managers:", err);
