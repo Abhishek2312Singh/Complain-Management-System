@@ -409,9 +409,9 @@ const InProcessComplain = () => {
             : `Failed to close complain. Status: ${response.status}`
         );
       }
-      
-      const data = await response.text().catch(() => "");
-      setCloseMessage(data && data.trim().length > 0 ? data.trim() : "Complain closed successfully.");
+
+      // API returns void (status-only), so don't attempt to read/parse a body.
+      setCloseMessage("Complain closed successfully.");
       setTimeout(() => setCloseMessage(""), 3000);
       
       // Refresh the list

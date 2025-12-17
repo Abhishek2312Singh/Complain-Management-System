@@ -72,4 +72,9 @@ public class AuthController {
         userService.assignManager(complainNumber,managerUsername);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
+    @PutMapping("/closecomplain")
+    public ResponseEntity<Void> closeComplain(@RequestParam String complainNumber){
+        userService.setComplainClosed(complainNumber);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 }
