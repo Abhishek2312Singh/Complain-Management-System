@@ -284,40 +284,8 @@ function App() {
     setComplaints((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
   };
 
-  const closeComplaint = async (id) => {
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      window.alert("You are not authenticated. Please login again.");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `http://localhost:8080/closecomplain?complainNumber=${encodeURIComponent(id)}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        throw new Error(
-          errorText && errorText.trim().length > 0
-            ? errorText.trim()
-            : `Failed to close complain. Status: ${response.status}`
-        );
-      }
-
-      // API returns void (status-only), so don't attempt to read/parse a body.
-      window.alert("Complain closed successfully.");
-    } catch (err) {
-      window.alert(err?.message || "Failed to close complain.");
-      return;
-    }
-
+  // Track panel "Close" is only for exiting/dismissing the row (UI-only).
+  const closeComplaint = (id) => {
     const matches = (item) =>
       item.id === id || item.complaintNumber === id || item.complainNumber === id;
 

@@ -22,6 +22,8 @@ import java.util.List;
 @Service
 public class UserService{
     @Autowired
+    private MailingService mailingService;
+    @Autowired
     private SecurityConfig config;
     @Autowired
     private UserRepo userRepo;
@@ -72,7 +74,15 @@ public class UserService{
     public void setComplainClosed(String complainNumber){
         Complain complain = complainRepo.findByComplainNumber(complainNumber).orElseThrow(()->new RuntimeException("Complain Not Found!!"));
         complain.setStatus(ComplainStatus.CLOSED);
+        String to = complain.getEmail();
+        String subject = "Response generated : " + complainNumber;
+        String body = "Hello,\n\t" + complain.getUsername() + ", your complain has been closed. Please track your complain " +
+                "with Complain Number : " + complainNumber + "\nVisit Here : http://localhost:5173\n\n\nThank You" +
+                "\nManager Name : " + complain.getManager().getFullName() +
+                "\nManager Email : " + complain.getManager().getEmail();
+        System.out.println(body);
         complainRepo.save(complain);
+//        mailingService.sendsSimpleMail(to,subject,body);
     }
     public UserOutputDto getUser(Principal principal){
         if(principal.getName().equals("admin")){
